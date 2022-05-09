@@ -1,6 +1,21 @@
 import Foundation
 import MachO
 
+func convertIntTupleToString(name : Any) -> String {
+  var returnString = ""
+  let mirror = Mirror(reflecting: name)
+  for child in mirror.children {
+    guard let val = child.value as? Int8,
+      val != 0 else {
+        break
+    }
+    returnString.append(Character(UnicodeScalar(UInt8(val))))
+  }
+
+  return returnString
+}
+
+
 // support checking for Mach-O `cmd` and `cmdsize` properties
 extension Data {
     var loadCommand: UInt32 {
@@ -81,16 +96,16 @@ public enum Transmogrifier {
         segment.vmsize += UInt64(offset)
 
         let offsetSections = sections.map { section -> section_64 in
+            var section = section
             let sectionType = section.flags & UInt32(SECTION_TYPE)
             switch Int32(sectionType) {
             case S_ZEROFILL, S_GB_ZEROFILL, S_THREAD_LOCAL_ZEROFILL:
-                return section
-            case _: break
+                section.offset = 0
+            case _:
+                section.offset += UInt32(offset)
+                section.reloff += section.reloff > 0 ? UInt32(offset) : 0
+                break
             }
-
-            var section = section
-            section.offset += UInt32(offset)
-            section.reloff += section.reloff > 0 ? UInt32(offset) : 0
             return section
         }
 
@@ -229,6 +244,10 @@ public enum Transmogrifier {
         ].merge()
 
         // save back to disk
-        try! reworkedData.write(to: URL(fileURLWithPath: path))
+        if ProcessInfo.processInfo.environment["NOT_INPLACE"] != nil {
+            try! reworkedData.write(to: URL(fileURLWithPath: path+".out"))
+        } else {
+            try! reworkedData.write(to: URL(fileURLWithPath: path))
+        }
     }
 }

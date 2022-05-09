@@ -16,6 +16,9 @@ let package = Package(
             name: "arm64-to-sim",
             dependencies: [ "Arm64ToSimLib" ]),
         .target(
+            name: "patch-bad-arm64",
+            dependencies: [ "Arm64ToSimLib" ]),
+        .target(
             name: "Arm64ToSimLib",
             dependencies: []),
         .testTarget(
